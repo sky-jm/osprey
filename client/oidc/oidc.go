@@ -21,23 +21,25 @@ const (
 
 // Client contains the details for a OIDC client
 type Client struct {
-	oAuthConfig         oauth2.Config
-	serverApplicationID string
-	useDeviceCode       bool
-	disableBrowserPopup bool
-	loginTimeout        time.Duration
-	token               *oauth2.Token
-	muLogin             sync.Mutex
-	stopChan            chan tokenResponse
+	oAuthConfig            oauth2.Config
+	serverApplicationID    string
+	useDeviceCode          bool
+	disableBrowserPopup    bool
+	backgroundBrowserPopup bool
+	loginTimeout           time.Duration
+	token                  *oauth2.Token
+	muLogin                sync.Mutex
+	stopChan               chan tokenResponse
 }
 
 // Config contains the configuration for a OIDC client
 type Config struct {
 	oauth2.Config
-	ServerApplicationID string
-	LoginTimeout        time.Duration
-	UseDeviceCode       bool
-	DisableBrowserPopup bool
+	ServerApplicationID    string
+	LoginTimeout           time.Duration
+	UseDeviceCode          bool
+	DisableBrowserPopup    bool
+	BackgroundBrowserPopup bool
 }
 
 // New returns a new OIDC client
@@ -50,11 +52,12 @@ func New(config Config) *Client {
 			RedirectURL:  config.RedirectURL,
 			Scopes:       config.Scopes,
 		},
-		serverApplicationID: config.ServerApplicationID,
-		loginTimeout:        config.LoginTimeout,
-		useDeviceCode:       config.UseDeviceCode,
-		disableBrowserPopup: config.DisableBrowserPopup,
-		stopChan:            make(chan tokenResponse),
+		serverApplicationID:    config.ServerApplicationID,
+		loginTimeout:           config.LoginTimeout,
+		useDeviceCode:          config.UseDeviceCode,
+		disableBrowserPopup:    config.DisableBrowserPopup,
+		backgroundBrowserPopup: config.BackgroundBrowserPopup,
+		stopChan:               make(chan tokenResponse),
 	}
 }
 
@@ -76,11 +79,11 @@ func (c *Client) Token(ctx context.Context) (*oauth2.Token, error) {
 		return c.authWithDeviceFlow(ctx, c.loginTimeout)
 	}
 
-	return c.authWithOIDCCallback(ctx, c.loginTimeout, c.disableBrowserPopup)
+	return c.authWithOIDCCallback(ctx, c.loginTimeout, c.disableBrowserPopup, c.backgroundBrowserPopup)
 }
 
 // authWithOIDCCallback attempts to authorise using a local callback
-func (c *Client) authWithOIDCCallback(ctx context.Context, loginTimeout time.Duration, disableBrowserPopup bool) (*oauth2.Token, error) {
+func (c *Client) authWithOIDCCallback(ctx context.Context, loginTimeout time.Duration, disableBrowserPopup bool, backgroundBrowserPopup bool) (*oauth2.Token, error) {
 	redirectURL, err := url.Parse(c.oAuthConfig.RedirectURL)
 	if err != nil {
 		log.Fatalf("Unable to parse oidc redirect uri: %e", err)
@@ -109,7 +112,11 @@ func (c *Client) authWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 		case "windows":
 			err = exec.Command("rundll32", "url.dll,FileProtocolHandler", authURL).Start()
 		case "darwin":
-			err = exec.Command("open", authURL).Start()
+			if backgroundBrowserPopup {
+				err = exec.Command("open", "-g", authURL).Start()
+			} else {
+				err = exec.Command("open", authURL).Start()
+			}
 		default:
 			err = fmt.Errorf("unknown OS %q", runtime.GOOS)
 		}
@@ -177,7 +184,7 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 function closeWindow() {
   window.close();
 }
-window.onload = setTimeout(closeWindow, 1000);
+window.onload = setTimeout(closeWindow, 200);
 </script>
 </head>
 <body>
