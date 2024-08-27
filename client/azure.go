@@ -100,9 +100,10 @@ func NewAzureRetriever(provider *ProviderConfig, options RetrieverOptions) (Retr
 				RedirectURL:  provider.redirectURI,
 				Scopes:       provider.scopes,
 			},
-			LoginTimeout:        options.LoginTimeout,
-			UseDeviceCode:       options.UseDeviceCode,
-			DisableBrowserPopup: options.DisableBrowserPopup,
+			LoginTimeout:           options.LoginTimeout,
+			UseDeviceCode:          options.UseDeviceCode,
+			DisableBrowserPopup:    options.DisableBrowserPopup,
+			BackgroundBrowserPopup: options.BackgroundBrowserPopup,
 		}),
 		tenantID: provider.azureTenantID,
 	}

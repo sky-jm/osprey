@@ -31,11 +31,12 @@ The connection to the osprey servers is via HTTPS.
 }
 
 var (
-	useDeviceCode       bool
-	loginTimeout        time.Duration
-	disableBrowserPopup bool
-	username            string
-	password            string
+	useDeviceCode          bool
+	loginTimeout           time.Duration
+	disableBrowserPopup    bool
+	backgroundBrowserPopup bool
+	username               string
+	password               string
 )
 
 func init() {
@@ -46,6 +47,8 @@ func init() {
 		"set to override the login timeout when using local callback or device-code flow for authorisation")
 	loginCmd.Flags().BoolVarP(&disableBrowserPopup, "disable-browser-popup", "", false,
 		"enable to disable the browser popup used for authentication")
+	loginCmd.Flags().BoolVarP(&backgroundBrowserPopup, "background-browser-popup", "", false,
+		"enable to hint the browser to stay in the background")
 	loginCmd.Flags().StringVarP(&username, "username", "u", "",
 		"username for authenticating with the osprey server")
 	loginCmd.Flags().StringVarP(&password, "password", "p", "",
@@ -73,11 +76,12 @@ func login(_ *cobra.Command, _ []string) {
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 	retrieverOptions := client.RetrieverOptions{
-		UseDeviceCode:       useDeviceCode,
-		LoginTimeout:        loginTimeout,
-		DisableBrowserPopup: disableBrowserPopup,
-		Username:            username,
-		Password:            password,
+		UseDeviceCode:          useDeviceCode,
+		LoginTimeout:           loginTimeout,
+		DisableBrowserPopup:    disableBrowserPopup,
+		BackgroundBrowserPopup: backgroundBrowserPopup,
+		Username:               username,
+		Password:               password,
 	}
 
 	retrievers, err := ospreyconfig.GetRetrievers(snapshot.ProviderConfigs(), retrieverOptions)
